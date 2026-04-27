@@ -170,6 +170,12 @@ const LINE_RULES: LineRule[] = [
     message: "WebSocket connection to non-standard port",
     pattern: /new\s+WebSocket\s*\(\s*["']wss?:\/\/[^"']*:(\d+)/,
   },
+  {
+    ruleId: "sql-injection",
+    severity: "critical",
+    message: "Possible SQL injection detected (string concatenation in query)",
+    pattern: /(SELECT|INSERT|UPDATE|DELETE)\b.*?(?:\+|\$\{.*\})/,
+  },
 ];
 
 const STANDARD_PORTS = new Set([80, 443, 8080, 8443, 3000]);
