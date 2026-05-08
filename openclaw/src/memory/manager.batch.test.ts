@@ -1,3 +1,4 @@
+import { parseJsonlArray } from "./batch-utils.js";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -34,10 +35,7 @@ describe("memory indexing with OpenAI batches", () => {
         continue;
       }
       const text = typeof value === "string" ? value : await value.text();
-      uploadedRequests = text
-        .split("\n")
-        .filter(Boolean)
-        .map((line: string) => JSON.parse(line) as { custom_id?: string });
+      uploadedRequests = parseJsonlArray<{ custom_id?: string }>(text);
     }
     return uploadedRequests;
   }

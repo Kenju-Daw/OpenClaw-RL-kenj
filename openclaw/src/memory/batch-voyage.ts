@@ -8,6 +8,7 @@ import {
   extractBatchErrorMessage,
   formatUnavailableBatchError,
   normalizeBatchBaseUrl,
+  parseJsonlArray,
   postJsonWithRetry,
   runEmbeddingBatchGroups,
   type EmbeddingBatchExecutionParams,
@@ -124,11 +125,7 @@ async function readVoyageBatchError(params: {
           if (!text.trim()) {
             return undefined;
           }
-          const lines = text
-            .split("\n")
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .map((line) => JSON.parse(line) as VoyageBatchOutputLine);
+          const lines = parseJsonlArray<VoyageBatchOutputLine>(text);
           return extractBatchErrorMessage(lines);
         },
       }),
