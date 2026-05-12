@@ -6,6 +6,7 @@ import {
   extractBatchErrorMessage,
   formatUnavailableBatchError,
   normalizeBatchBaseUrl,
+  parseJsonlArray,
   postJsonWithRetry,
   runEmbeddingBatchGroups,
   type EmbeddingBatchExecutionParams,
@@ -110,14 +111,7 @@ async function fetchOpenAiBatchResource<T>(params: {
 }
 
 function parseOpenAiBatchOutput(text: string): OpenAiBatchOutputLine[] {
-  if (!text.trim()) {
-    return [];
-  }
-  return text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => JSON.parse(line) as OpenAiBatchOutputLine);
+  return parseJsonlArray<OpenAiBatchOutputLine>(text);
 }
 
 async function readOpenAiBatchError(params: {

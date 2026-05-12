@@ -36,3 +36,27 @@ export function splitBatchRequests<T>(requests: T[], maxRequests: number): T[][]
   }
   return groups;
 }
+
+/**
+ * Parses a large JSONL string efficiently in a single pass to reduce memory and GC overhead.
+ * This replaces chaining `.split("\n").map().filter()` which creates multiple intermediate arrays.
+ */
+export function parseJsonlArray<T>(text: string): T[] {
+  if (!text) {
+    return [];
+  }
+  const results: T[] = [];
+  let start = 0;
+  while (start < text.length) {
+    let end = text.indexOf("\n", start);
+    if (end === -1) {
+      end = text.length;
+    }
+    const line = text.slice(start, end).trim();
+    if (line) {
+      results.push(JSON.parse(line));
+    }
+    start = end + 1;
+  }
+  return results;
+}
