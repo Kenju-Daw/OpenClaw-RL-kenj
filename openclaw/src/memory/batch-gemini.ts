@@ -1,3 +1,4 @@
+import { parseJsonlArray } from "./batch-utils.js";
 import {
   buildEmbeddingBatchGroupOptions,
   runEmbeddingBatchGroups,
@@ -213,11 +214,7 @@ function parseGeminiBatchOutput(text: string): GeminiBatchOutputLine[] {
   if (!text.trim()) {
     return [];
   }
-  return text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => JSON.parse(line) as GeminiBatchOutputLine);
+  return parseJsonlArray<GeminiBatchOutputLine>(text);
 }
 
 async function waitForGeminiBatch(params: {

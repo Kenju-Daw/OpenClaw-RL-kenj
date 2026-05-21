@@ -36,3 +36,25 @@ export function splitBatchRequests<T>(requests: T[], maxRequests: number): T[][]
   }
   return groups;
 }
+
+/**
+ * Single-pass JSONL parser to prevent significant garbage collection overhead
+ * compared to chaining string `.split().map().filter()` array methods on large strings.
+ */
+export function parseJsonlArray<T>(text: string): T[] {
+  if (!text) return [];
+  const result: T[] = [];
+  let lastIndex = 0;
+  while (lastIndex < text.length) {
+    let nextIndex = text.indexOf('\n', lastIndex);
+    if (nextIndex === -1) {
+      nextIndex = text.length;
+    }
+    const line = text.slice(lastIndex, nextIndex).trim();
+    if (line) {
+      result.push(JSON.parse(line) as T);
+    }
+    lastIndex = nextIndex + 1;
+  }
+  return result;
+}
