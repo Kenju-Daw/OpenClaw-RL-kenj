@@ -26,6 +26,28 @@ export function buildBatchHeaders(
   return headers;
 }
 
+export function parseJsonlArray<T>(text: string): T[] {
+  if (!text.trim()) {
+    return [];
+  }
+  const results: T[] = [];
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "\n") {
+      const line = text.slice(start, i).trim();
+      if (line) {
+        results.push(JSON.parse(line) as T);
+      }
+      start = i + 1;
+    }
+  }
+  const lastLine = text.slice(start).trim();
+  if (lastLine) {
+    results.push(JSON.parse(lastLine) as T);
+  }
+  return results;
+}
+
 export function splitBatchRequests<T>(requests: T[], maxRequests: number): T[][] {
   if (requests.length <= maxRequests) {
     return [requests];
