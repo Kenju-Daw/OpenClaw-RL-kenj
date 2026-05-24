@@ -1,0 +1,3 @@
+## 2026-05-24 - Prevent Heavy Garbage Collection on Large API String Responses
+**Learning:** Chaining array methods like `.split('\n').map(...).filter(...)` on large multi-line string API responses causes excessive garbage collection by creating many intermediate array allocations. This severely drops Node.js performance for operations parsing thousands of JSONL lines (like embeddings batches).
+**Action:** For processing large line-delimited strings, create and use a single-pass while-loop parser (e.g. `parseJsonlArray`) that finds line endings via `indexOf('\n')` to directly extract and push only valid lines to a final result array, eliminating intermediate allocations.
