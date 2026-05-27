@@ -1,0 +1,3 @@
+## 2023-10-27 - Large JSONL Parsing GC Overhead
+**Learning:** Using chained `.split('\n').map().filter()` array methods to parse large multi-line JSONL strings from API batch responses causes significant string allocation and garbage collection (GC) overhead. This pattern scales poorly for large embedding batch results and memory sync operations.
+**Action:** When parsing large JSONL content, always use a single-pass loop utility like `parseJsonlArray` from `src/memory/batch-utils.ts` to iterate via index slices instead of allocating intermediary arrays, avoiding unnecessary object instantiation and GC pressure.

@@ -36,3 +36,34 @@ export function splitBatchRequests<T>(requests: T[], maxRequests: number): T[][]
   }
   return groups;
 }
+
+/**
+ * Parses large JSONL strings using single-pass index slices to avoid string allocation
+ * and garbage collection (GC) overhead compared to `.split('\n').map().filter()`.
+ *
+ * ⚡ Bolt Optimization:
+ * - Reduces memory spikes for large batch embedding results.
+ */
+export function parseJsonlArray<T>(text: string): T[] {
+  if (!text) {
+    return [];
+  }
+  const results: T[] = [];
+  let start = 0;
+  while (start < text.length) {
+    let end = text.indexOf("\n", start);
+    if (end === -1) {
+      end = text.length;
+    }
+    let line = text.slice(start, end);
+    if (line.endsWith("\r")) {
+      line = line.slice(0, -1);
+    }
+    line = line.trim();
+    if (line) {
+      results.push(JSON.parse(line) as T);
+    }
+    start = end + 1;
+  }
+  return results;
+}

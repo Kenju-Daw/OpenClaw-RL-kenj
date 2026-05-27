@@ -17,6 +17,7 @@ import {
   withRemoteHttpResponse,
 } from "./batch-embedding-common.js";
 import type { VoyageEmbeddingClient } from "./embeddings-voyage.js";
+import { parseJsonlArray } from "./batch-utils.js";
 
 /**
  * Voyage Batch API Input Line format.
@@ -124,11 +125,7 @@ async function readVoyageBatchError(params: {
           if (!text.trim()) {
             return undefined;
           }
-          const lines = text
-            .split("\n")
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .map((line) => JSON.parse(line) as VoyageBatchOutputLine);
+          const lines = parseJsonlArray<VoyageBatchOutputLine>(text);
           return extractBatchErrorMessage(lines);
         },
       }),
