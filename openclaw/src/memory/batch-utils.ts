@@ -36,3 +36,28 @@ export function splitBatchRequests<T>(requests: T[], maxRequests: number): T[][]
   }
   return groups;
 }
+
+/**
+ * Parses a JSONL string in a single pass without creating intermediate arrays.
+ * This is an optimized replacement for `.split('\n').map().filter().map()`
+ * to prevent significant V8 garbage collection overhead on large batch responses.
+ */
+export function parseJsonlArray<T>(text: string): T[] {
+  if (!text) {
+    return [];
+  }
+  const results: T[] = [];
+  let start = 0;
+  while (start < text.length) {
+    let end = text.indexOf('\n', start);
+    if (end === -1) {
+      end = text.length;
+    }
+    const line = text.slice(start, end).trim();
+    if (line) {
+      results.push(JSON.parse(line));
+    }
+    start = end + 1;
+  }
+  return results;
+}
