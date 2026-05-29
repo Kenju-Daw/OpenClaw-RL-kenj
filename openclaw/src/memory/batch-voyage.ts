@@ -1,3 +1,4 @@
+import { parseJsonlArray } from "./batch-utils.js";
 import { createInterface } from "node:readline";
 import { Readable } from "node:stream";
 import {
@@ -124,11 +125,7 @@ async function readVoyageBatchError(params: {
           if (!text.trim()) {
             return undefined;
           }
-          const lines = text
-            .split("\n")
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .map((line) => JSON.parse(line) as VoyageBatchOutputLine);
+          const lines = parseJsonlArray<VoyageBatchOutputLine>(text);
           return extractBatchErrorMessage(lines);
         },
       }),
