@@ -36,3 +36,23 @@ export function splitBatchRequests<T>(requests: T[], maxRequests: number): T[][]
   }
   return groups;
 }
+
+export function parseJsonlArray<T>(text: string): T[] {
+  if (!text.trim()) {
+    return [];
+  }
+  const results: T[] = [];
+  let startIndex = 0;
+  while (startIndex < text.length) {
+    let endIndex = text.indexOf("\n", startIndex);
+    if (endIndex === -1) {
+      endIndex = text.length;
+    }
+    const line = text.slice(startIndex, endIndex).trim();
+    if (line) {
+      results.push(JSON.parse(line));
+    }
+    startIndex = endIndex + 1;
+  }
+  return results;
+}
