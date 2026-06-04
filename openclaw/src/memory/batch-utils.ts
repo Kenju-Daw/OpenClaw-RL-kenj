@@ -26,6 +26,18 @@ export function buildBatchHeaders(
   return headers;
 }
 
+export function parseJsonlArray<T>(text: string): T[] {
+  const result: T[] = [];
+  const lines = text.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]?.trim();
+    if (line) {
+      result.push(JSON.parse(line) as T);
+    }
+  }
+  return result;
+}
+
 export function splitBatchRequests<T>(requests: T[], maxRequests: number): T[][] {
   if (requests.length <= maxRequests) {
     return [requests];
