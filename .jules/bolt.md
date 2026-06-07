@@ -1,0 +1,3 @@
+## 2024-06-07 - Avoid `.split().map().filter()` for Large JSONL Strings
+**Learning:** Using `.split("\\n").map().filter()` chains on large, multi-line JSONL strings from API responses creates a massive number of short-lived intermediate array instances. For 50MB+ payload responses, this triggers extensive V8 garbage collection (GC) overhead that slows down the main thread.
+**Action:** When extracting large arrays of objects from API text outputs, create single-pass iterative loops (e.g., using `indexOf("\\n")` and `.substring()`) to parse strings linearly without instantiating memory-heavy intermediate state arrays.
