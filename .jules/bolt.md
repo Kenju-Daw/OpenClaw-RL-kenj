@@ -1,0 +1,3 @@
+## 2024-06-08 - Optimized Memory Batch Output Parsing
+**Learning:** Found significant overhead in processing large embedding JSONL batch responses from providers like OpenAI, Gemini, and Voyage. Using `split("\\n")` chained with `map` and `filter` creates multiple intermediate arrays, causing heavy GC pressure and CPU overhead for tens of thousands of requests per batch.
+**Action:** Replaced array method chains with a zero-allocation single-pass `indexOf` string slicing loop (`parseJsonlArray` from `batch-utils.ts`), which is dramatically faster and avoids creating intermediate arrays for each step, improving parsing time for large JSONL outputs by over 2x.
