@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { useFastShortTimeouts } from "../../test/helpers/fast-short-timeouts.js";
 import type { OpenClawConfig } from "../config/config.js";
+import { parseJsonlArray } from "./batch-utils.js";
 import { getMemorySearchManager, type MemoryIndexManager } from "./index.js";
 import { createOpenAIEmbeddingProviderMock } from "./test-embeddings-mock.js";
 import "./test-runtime-mocks.js";
@@ -34,10 +35,7 @@ describe("memory indexing with OpenAI batches", () => {
         continue;
       }
       const text = typeof value === "string" ? value : await value.text();
-      uploadedRequests = text
-        .split("\n")
-        .filter(Boolean)
-        .map((line: string) => JSON.parse(line) as { custom_id?: string });
+      uploadedRequests = parseJsonlArray<{ custom_id?: string }>(text);
     }
     return uploadedRequests;
   }
