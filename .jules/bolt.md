@@ -1,0 +1,3 @@
+## 2025-06-14 - JSONL Parsing Garbage Collection Bottleneck
+**Learning:** Large multi-line JSONL responses (e.g. from Batch Embedding APIs) parsed using the common pattern `text.split("\n").map(...).filter(...)` can cause significant garbage collection pressure due to allocating multiple large intermediate arrays before the final mapped objects.
+**Action:** Use a streaming/single-pass utility like `parseJsonlArray` from `src/memory/batch-utils.ts` instead. It iterates over the string via `.indexOf('\n')` and slices only the necessary bounds to run `JSON.parse()`, bypassing the allocation of full intermediate arrays.

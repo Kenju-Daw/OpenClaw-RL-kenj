@@ -12,5 +12,5 @@ export {
   type EmbeddingBatchExecutionParams,
 } from "./batch-runner.js";
 export { uploadBatchJsonlFile } from "./batch-upload.js";
-export { buildBatchHeaders, normalizeBatchBaseUrl } from "./batch-utils.js";
+export { buildBatchHeaders, normalizeBatchBaseUrl, parseJsonlArray } from "./batch-utils.js";
 export { withRemoteHttpResponse } from "./remote-http.js";
