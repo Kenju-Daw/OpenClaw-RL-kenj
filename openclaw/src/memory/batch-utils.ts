@@ -36,3 +36,30 @@ export function splitBatchRequests<T>(requests: T[], maxRequests: number): T[][]
   }
   return groups;
 }
+
+/**
+ * ⚡ Bolt: Performance Optimization
+ * Parses JSONL strings into an array of objects in a single pass.
+ * This avoids the garbage collection overhead and memory spikes caused by
+ * chaining string `.split("\n").map(...).filter(...)` methods on large API responses.
+ * By using `indexOf` and slicing, we eliminate the need for intermediate arrays.
+ */
+export function parseJsonlArray<T>(text: string): T[] {
+  if (!text.trim()) {
+    return [];
+  }
+  const result: T[] = [];
+  let start = 0;
+  while (start < text.length) {
+    let end = text.indexOf("\n", start);
+    if (end === -1) {
+      end = text.length;
+    }
+    const line = text.slice(start, end).trim();
+    if (line) {
+      result.push(JSON.parse(line) as T);
+    }
+    start = end + 1;
+  }
+  return result;
+}
