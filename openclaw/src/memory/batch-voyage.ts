@@ -16,6 +16,7 @@ import {
   uploadBatchJsonlFile,
   withRemoteHttpResponse,
 } from "./batch-embedding-common.js";
+import { parseJsonlArray } from "./batch-utils.js";
 import type { VoyageEmbeddingClient } from "./embeddings-voyage.js";
 
 /**
@@ -121,15 +122,8 @@ async function readVoyageBatchError(params: {
         onResponse: async (res) => {
           await assertVoyageResponseOk(res, "voyage batch error file content failed");
           const text = await res.text();
-          if (!text.trim()) {
-            return undefined;
-          }
-          const lines = text
-            .split("\n")
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .map((line) => JSON.parse(line) as VoyageBatchOutputLine);
-          return extractBatchErrorMessage(lines);
+          const lines = parseJsonlArray<VoyageBatchOutputLine>(text);
+          return lines.length > 0 ? extractBatchErrorMessage(lines) : undefined;
         },
       }),
     );

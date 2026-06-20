@@ -36,3 +36,51 @@ export function splitBatchRequests<T>(requests: T[], maxRequests: number): T[][]
   }
   return groups;
 }
+
+/**
+ * Optimised single-pass parser for multi-line JSONL responses.
+ * Avoids `.split('\n').map().filter()` which causes significant GC overhead on huge files.
+ */
+export function parseJsonlArray<T>(text: string): T[] {
+  if (!text) {
+    return [];
+  }
+  const results: T[] = [];
+  let start = 0;
+  let end = text.indexOf("\n");
+
+  while (end !== -1) {
+    let i = start;
+    let j = end - 1;
+    while (i <= j && text.charCodeAt(i) <= 32) {
+      i++;
+    }
+    while (j >= i && text.charCodeAt(j) <= 32) {
+      j--;
+    }
+
+    if (i <= j) {
+      results.push(JSON.parse(text.substring(i, j + 1)) as T);
+    }
+
+    start = end + 1;
+    end = text.indexOf("\n", start);
+  }
+
+  if (start < text.length) {
+    let i = start;
+    let j = text.length - 1;
+    while (i <= j && text.charCodeAt(i) <= 32) {
+      i++;
+    }
+    while (j >= i && text.charCodeAt(j) <= 32) {
+      j--;
+    }
+
+    if (i <= j) {
+      results.push(JSON.parse(text.substring(i, j + 1)) as T);
+    }
+  }
+
+  return results;
+}
