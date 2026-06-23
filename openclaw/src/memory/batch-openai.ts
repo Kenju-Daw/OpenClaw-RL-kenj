@@ -14,6 +14,7 @@ import {
   uploadBatchJsonlFile,
   withRemoteHttpResponse,
 } from "./batch-embedding-common.js";
+import { parseJsonlArray } from "./batch-utils.js";
 import type { OpenAiEmbeddingClient } from "./embeddings-openai.js";
 
 export type OpenAiBatchRequest = {
@@ -113,11 +114,7 @@ function parseOpenAiBatchOutput(text: string): OpenAiBatchOutputLine[] {
   if (!text.trim()) {
     return [];
   }
-  return text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => JSON.parse(line) as OpenAiBatchOutputLine);
+  return parseJsonlArray<OpenAiBatchOutputLine>(text);
 }
 
 async function readOpenAiBatchError(params: {
