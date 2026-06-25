@@ -26,6 +26,29 @@ export function buildBatchHeaders(
   return headers;
 }
 
+/**
+ * Optimized single-pass JSONL parser.
+ * Replaces `text.split("\n").map(...).filter(...).map(...)` to avoid
+ * creating large intermediate arrays and reduce garbage collection overhead
+ * when processing large batch API responses.
+ */
+export function parseJsonlArray<T>(text: string): T[] {
+  const results: T[] = [];
+  let start = 0;
+  while (start < text.length) {
+    let end = text.indexOf("\n", start);
+    if (end === -1) {
+      end = text.length;
+    }
+    const line = text.slice(start, end).trim();
+    if (line.length > 0) {
+      results.push(JSON.parse(line) as T);
+    }
+    start = end + 1;
+  }
+  return results;
+}
+
 export function splitBatchRequests<T>(requests: T[], maxRequests: number): T[][] {
   if (requests.length <= maxRequests) {
     return [requests];
