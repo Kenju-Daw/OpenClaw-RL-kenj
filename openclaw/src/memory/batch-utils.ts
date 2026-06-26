@@ -36,3 +36,20 @@ export function splitBatchRequests<T>(requests: T[], maxRequests: number): T[][]
   }
   return groups;
 }
+
+/**
+ * Parses a newline-separated string of JSON objects into an array.
+ * This single-pass loop implementation avoids the significant memory allocation
+ * and garbage collection overhead that chaining `.split().map().filter().map()`
+ * would cause on large multi-line JSONL payloads.
+ */
+export function parseJsonlArray<T>(text: string): T[] {
+  const result: T[] = [];
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed) {
+      result.push(JSON.parse(trimmed) as T);
+    }
+  }
+  return result;
+}
