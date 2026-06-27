@@ -36,3 +36,31 @@ export function splitBatchRequests<T>(requests: T[], maxRequests: number): T[][]
   }
   return groups;
 }
+
+/**
+ * ⚡ Bolt Performance Optimization:
+ * Parses a large multi-line JSONL string into an array of objects.
+ * Replaces `.split("\n").map().filter()` chains with a single-pass while loop
+ * to avoid excessive intermediate array and string allocations.
+ * Impact: Significantly reduces garbage collection overhead and prevents
+ * blocking the main thread when processing large batch API responses.
+ */
+export function parseJsonlArray<T>(text: string): T[] {
+  if (!text.trim()) {
+    return [];
+  }
+  const results: T[] = [];
+  let currentPos = 0;
+  while (currentPos < text.length) {
+    let nextNewline = text.indexOf("\n", currentPos);
+    if (nextNewline === -1) {
+      nextNewline = text.length;
+    }
+    const line = text.slice(currentPos, nextNewline).trim();
+    if (line) {
+      results.push(JSON.parse(line) as T);
+    }
+    currentPos = nextNewline + 1;
+  }
+  return results;
+}
