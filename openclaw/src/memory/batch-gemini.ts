@@ -3,7 +3,11 @@ import {
   runEmbeddingBatchGroups,
   type EmbeddingBatchExecutionParams,
 } from "./batch-runner.js";
-import { buildBatchHeaders, normalizeBatchBaseUrl } from "./batch-utils.js";
+import {
+  buildBatchHeaders,
+  normalizeBatchBaseUrl,
+  parseJsonlArray,
+} from "./batch-utils.js";
 import { debugEmbeddingsLog } from "./embeddings-debug.js";
 import type { GeminiEmbeddingClient } from "./embeddings-gemini.js";
 import { hashText } from "./internal.js";
@@ -213,11 +217,7 @@ function parseGeminiBatchOutput(text: string): GeminiBatchOutputLine[] {
   if (!text.trim()) {
     return [];
   }
-  return text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => JSON.parse(line) as GeminiBatchOutputLine);
+  return parseJsonlArray<GeminiBatchOutputLine>(text);
 }
 
 async function waitForGeminiBatch(params: {

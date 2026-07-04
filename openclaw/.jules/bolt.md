@@ -1,0 +1,3 @@
+## 2025-02-27 - Replace array chaining with single-pass JSONL parsing
+**Learning:** Chaining array methods like `.split('\n').map().filter()` when processing large multi-line JSONL strings from API responses causes significant garbage collection overhead and memory usage due to the creation of intermediate arrays.
+**Action:** When parsing large JSONL content, always use a single-pass `while` loop (e.g., `parseJsonlArray`) with `text.indexOf('\n', start)` and `text.substring()` to avoid creating intermediate arrays and reduce memory pressure.
