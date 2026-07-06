@@ -36,3 +36,23 @@ export function splitBatchRequests<T>(requests: T[], maxRequests: number): T[][]
   }
   return groups;
 }
+
+/**
+ * Parses a JSONL string into an array of objects in a single pass to avoid heavy garbage collection overhead.
+ */
+export function parseJsonlArray<T>(text: string): T[] {
+  const results: T[] = [];
+  let start = 0;
+  while (start < text.length) {
+    let end = text.indexOf("\n", start);
+    if (end === -1) {
+      end = text.length;
+    }
+    const line = text.slice(start, end).trim();
+    if (line) {
+      results.push(JSON.parse(line) as T);
+    }
+    start = end + 1;
+  }
+  return results;
+}
