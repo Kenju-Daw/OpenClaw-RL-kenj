@@ -46,12 +46,26 @@ export function parseQmdQueryJson(stdout: string, stderr: string): QmdQueryResul
   }
 }
 
+/**
+ * ⚡ Bolt: Performance Optimization
+ * Single-pass loop utility for parsing large multi-line output.
+ * Replaces chaining string `.split('\n').map().filter().some()` array methods to prevent significant
+ * memory allocation overhead and reduce garbage collection pauses, especially when raw is a large JSON string.
+ */
 function isQmdNoResultsOutput(raw: string): boolean {
-  const lines = raw
-    .split(/\r?\n/)
-    .map((line) => line.trim().toLowerCase().replace(/\s+/g, " "))
-    .filter((line) => line.length > 0);
-  return lines.some((line) => isQmdNoResultsLine(line));
+  let start = 0;
+  while (start < raw.length) {
+    let end = raw.indexOf("\n", start);
+    if (end === -1) {
+      end = raw.length;
+    }
+    const line = raw.slice(start, end).trim().toLowerCase().replace(/\s+/g, " ");
+    if (line.length > 0 && isQmdNoResultsLine(line)) {
+      return true;
+    }
+    start = end + 1;
+  }
+  return false;
 }
 
 function isQmdNoResultsLine(line: string): boolean {
