@@ -5,9 +5,26 @@ export async function readFileTailLines(filePath: string, maxLines: number): Pro
   if (!raw.trim()) {
     return [];
   }
-  const lines = raw.replace(/\r/g, "").split("\n");
-  const out = lines.slice(Math.max(0, lines.length - maxLines));
-  return out.map((line) => line.trimEnd()).filter((line) => line.trim().length > 0);
+
+  const lines: string[] = [];
+  let end = raw.length;
+
+  // ⚡ Bolt: Performance Optimization
+  // Single-pass backward loop prevents allocating a massive array of lines
+  // for large log files, short-circuiting once maxLines is reached.
+  while (end > 0 && lines.length < maxLines) {
+    const start = raw.lastIndexOf("\n", end - 1);
+    const realStart = start === -1 ? 0 : start + 1;
+    const line = raw.slice(realStart, end).replace(/\r/g, "").trimEnd();
+
+    if (line.trim().length > 0) {
+      lines.push(line);
+    }
+
+    end = start === -1 ? 0 : start;
+  }
+
+  return lines.toReversed();
 }
 
 function countMatches(haystack: string, needle: string): number {
