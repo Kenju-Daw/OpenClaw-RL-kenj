@@ -357,15 +357,32 @@ function ensureTranscriptFile(params: { transcriptPath: string; sessionId: strin
 
 function transcriptHasIdempotencyKey(transcriptPath: string, idempotencyKey: string): boolean {
   try {
-    const lines = fs.readFileSync(transcriptPath, "utf-8").split(/\r?\n/);
-    for (const line of lines) {
-      if (!line.trim()) {
-        continue;
+    const text = fs.readFileSync(transcriptPath, "utf-8");
+    // ⚡ Bolt: Performance Optimization
+    // Replaced .split(/\r?\n/) with a single-pass while loop using indexOf('\n').
+    // This avoids massive array allocation overhead for large transcripts and
+    // takes advantage of short-circuit early returns, significantly reducing
+    // memory pressure and garbage collection pauses.
+    let start = 0;
+    while (start < text.length) {
+      let end = text.indexOf("\n", start);
+      if (end === -1) {
+        end = text.length;
       }
-      const parsed = JSON.parse(line) as { message?: { idempotencyKey?: unknown } };
-      if (parsed?.message?.idempotencyKey === idempotencyKey) {
-        return true;
+
+      const line = text.slice(start, end).trim();
+      if (line) {
+        try {
+          const parsed = JSON.parse(line) as { message?: { idempotencyKey?: unknown } };
+          if (parsed?.message?.idempotencyKey === idempotencyKey) {
+            return true;
+          }
+        } catch {
+          // Ignore malformed JSON on a single line and keep processing
+        }
       }
+
+      start = end + 1;
     }
     return false;
   } catch {
