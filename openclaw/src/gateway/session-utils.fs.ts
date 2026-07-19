@@ -13,6 +13,7 @@ import { resolveRequiredHomeDir } from "../infra/home-dir.js";
 import { jsonUtf8Bytes } from "../infra/json-utf8-bytes.js";
 import { hasInterSessionUserProvenance } from "../sessions/input-provenance.js";
 import { stripInlineDirectiveTagsForDisplay } from "../utils/directive-tags.js";
+import { extractTailLines, extractHeadLines } from "../utils/string/split.js";
 import { extractToolCallNames, hasToolCall } from "../utils/transcript-tools.js";
 import { stripEnvelope } from "./chat-sanitize.js";
 import type { SessionPreviewItem } from "./session-utils.types.js";
@@ -399,7 +400,7 @@ function extractFirstUserMessageFromTranscriptChunk(
   chunk: string,
   opts?: { includeInterSession?: boolean },
 ): string | null {
-  const lines = chunk.split(/\r?\n/).slice(0, MAX_LINES_TO_SCAN);
+  const lines = extractHeadLines(chunk, MAX_LINES_TO_SCAN);
   for (const line of lines) {
     if (!line.trim()) {
       continue;
@@ -483,8 +484,7 @@ function readLastMessagePreviewFromOpenTranscript(params: {
   fs.readSync(params.fd, buf, 0, readLen, readStart);
 
   const chunk = buf.toString("utf-8");
-  const lines = chunk.split(/\r?\n/).filter((l) => l.trim());
-  const tailLines = lines.slice(-LAST_MSG_MAX_LINES);
+  const tailLines = extractTailLines(chunk, LAST_MSG_MAX_LINES);
 
   for (let i = tailLines.length - 1; i >= 0; i--) {
     const line = tailLines[i];
@@ -679,8 +679,7 @@ function readRecentMessagesFromTranscript(
     fs.readSync(fd, buf, 0, readLen, readStart);
 
     const chunk = buf.toString("utf-8");
-    const lines = chunk.split(/\r?\n/).filter((l) => l.trim());
-    const tailLines = lines.slice(-PREVIEW_MAX_LINES);
+    const tailLines = extractTailLines(chunk, PREVIEW_MAX_LINES);
 
     const collected: TranscriptPreviewMessage[] = [];
     for (let i = tailLines.length - 1; i >= 0; i--) {
