@@ -357,15 +357,25 @@ function ensureTranscriptFile(params: { transcriptPath: string; sessionId: strin
 
 function transcriptHasIdempotencyKey(transcriptPath: string, idempotencyKey: string): boolean {
   try {
-    const lines = fs.readFileSync(transcriptPath, "utf-8").split(/\r?\n/);
-    for (const line of lines) {
-      if (!line.trim()) {
-        continue;
+    // ⚡ Bolt: Performance Optimization
+    // Replaced chained `.split(/\r?\n/)` with a single-pass while loop to iterate over lines.
+    // This avoids large memory allocations and garbage collection overhead.
+    const text = fs.readFileSync(transcriptPath, "utf-8");
+    let start = 0;
+    while (start < text.length) {
+      let end = text.indexOf("\n", start);
+      if (end === -1) {
+        end = text.length;
       }
-      const parsed = JSON.parse(line) as { message?: { idempotencyKey?: unknown } };
-      if (parsed?.message?.idempotencyKey === idempotencyKey) {
-        return true;
+      const sliceEnd = end > start && text[end - 1] === "\r" ? end - 1 : end;
+      const line = text.slice(start, sliceEnd).trim();
+      if (line) {
+        const parsed = JSON.parse(line) as { message?: { idempotencyKey?: unknown } };
+        if (parsed?.message?.idempotencyKey === idempotencyKey) {
+          return true;
+        }
       }
+      start = end + 1;
     }
     return false;
   } catch {
