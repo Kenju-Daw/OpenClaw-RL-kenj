@@ -54,6 +54,7 @@ export function parseJsonlArray<T>(text: string): T[] {
     if (end === -1) {
       end = text.length;
     }
+
     const line = text.slice(start, end).trim();
     if (line) {
       result.push(JSON.parse(line) as T);
