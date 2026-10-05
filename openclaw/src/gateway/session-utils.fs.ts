@@ -83,10 +83,23 @@ export function readSessionMessages(
     return [];
   }
 
-  const lines = fs.readFileSync(filePath, "utf-8").split(/\r?\n/);
+  const content = fs.readFileSync(filePath, "utf-8");
   const messages: unknown[] = [];
-  for (const line of lines) {
-    if (!line.trim()) {
+
+  // ⚡ Bolt: Performance Optimization
+  // Single-pass string parsing using indexOf avoids allocating intermediate arrays
+  // from .split(/\r?\n/) and reduces garbage collection pressure on large transcripts.
+  let start = 0;
+  while (start < content.length) {
+    let end = content.indexOf("\n", start);
+    if (end === -1) {
+      end = content.length;
+    }
+    const endSlice = end > start && content[end - 1] === "\r" ? end - 1 : end;
+    const line = content.slice(start, endSlice).trim();
+    start = end + 1;
+
+    if (!line) {
       continue;
     }
     try {
@@ -399,9 +412,22 @@ function extractFirstUserMessageFromTranscriptChunk(
   chunk: string,
   opts?: { includeInterSession?: boolean },
 ): string | null {
-  const lines = chunk.split(/\r?\n/).slice(0, MAX_LINES_TO_SCAN);
-  for (const line of lines) {
-    if (!line.trim()) {
+  // ⚡ Bolt: Performance Optimization
+  // Use a single-pass loop with indexOf to extract the first user message instead of
+  // chunk.split(/\r?\n/).slice() to minimize memory allocations.
+  let start = 0;
+  let count = 0;
+  while (start < chunk.length && count < MAX_LINES_TO_SCAN) {
+    let end = chunk.indexOf("\n", start);
+    if (end === -1) {
+      end = chunk.length;
+    }
+    const endSlice = end > start && chunk[end - 1] === "\r" ? end - 1 : end;
+    const line = chunk.slice(start, endSlice).trim();
+    start = end + 1;
+    count++;
+
+    if (!line) {
       continue;
     }
     try {
@@ -483,8 +509,25 @@ function readLastMessagePreviewFromOpenTranscript(params: {
   fs.readSync(params.fd, buf, 0, readLen, readStart);
 
   const chunk = buf.toString("utf-8");
-  const lines = chunk.split(/\r?\n/).filter((l) => l.trim());
-  const tailLines = lines.slice(-LAST_MSG_MAX_LINES);
+
+  // ⚡ Bolt: Performance Optimization
+  // Single-pass string parsing using indexOf prevents allocating intermediate arrays
+  // with .split(/\r?\n/).filter().slice()
+  const validLines: string[] = [];
+  let start = 0;
+  while (start < chunk.length) {
+    let end = chunk.indexOf("\n", start);
+    if (end === -1) {
+      end = chunk.length;
+    }
+    const endSlice = end > start && chunk[end - 1] === "\r" ? end - 1 : end;
+    const line = chunk.slice(start, endSlice).trim();
+    if (line) {
+      validLines.push(line);
+    }
+    start = end + 1;
+  }
+  const tailLines = validLines.slice(-LAST_MSG_MAX_LINES);
 
   for (let i = tailLines.length - 1; i >= 0; i--) {
     const line = tailLines[i];
@@ -679,8 +722,24 @@ function readRecentMessagesFromTranscript(
     fs.readSync(fd, buf, 0, readLen, readStart);
 
     const chunk = buf.toString("utf-8");
-    const lines = chunk.split(/\r?\n/).filter((l) => l.trim());
-    const tailLines = lines.slice(-PREVIEW_MAX_LINES);
+
+    // ⚡ Bolt: Performance Optimization
+    // Single-pass parsing prevents allocating intermediate arrays for string splits
+    const validLines: string[] = [];
+    let start = 0;
+    while (start < chunk.length) {
+      let end = chunk.indexOf("\n", start);
+      if (end === -1) {
+        end = chunk.length;
+      }
+      const endSlice = end > start && chunk[end - 1] === "\r" ? end - 1 : end;
+      const line = chunk.slice(start, endSlice).trim();
+      if (line) {
+        validLines.push(line);
+      }
+      start = end + 1;
+    }
+    const tailLines = validLines.slice(-PREVIEW_MAX_LINES);
 
     const collected: TranscriptPreviewMessage[] = [];
     for (let i = tailLines.length - 1; i >= 0; i--) {
