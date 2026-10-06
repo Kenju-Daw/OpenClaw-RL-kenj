@@ -46,12 +46,35 @@ export function parseQmdQueryJson(stdout: string, stderr: string): QmdQueryResul
   }
 }
 
+/**
+ * ⚡ Bolt: Performance Optimization
+ * Avoids chaining string `.split(/\r?\n/).map().filter()` array methods to prevent significant
+ * memory allocation overhead and reduce garbage collection pauses when parsing large outputs.
+ * We use a single-pass while loop, which aborts early if the marker line is found.
+ */
 function isQmdNoResultsOutput(raw: string): boolean {
-  const lines = raw
-    .split(/\r?\n/)
-    .map((line) => line.trim().toLowerCase().replace(/\s+/g, " "))
-    .filter((line) => line.length > 0);
-  return lines.some((line) => isQmdNoResultsLine(line));
+  if (!raw) {
+    return false;
+  }
+  let start = 0;
+  while (start < raw.length) {
+    let end = raw.indexOf("\n", start);
+    if (end === -1) {
+      end = raw.length;
+    }
+    const lineEnd = end > start && raw[end - 1] === "\r" ? end - 1 : end;
+    const line = raw
+      .slice(start, lineEnd)
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+
+    if (line.length > 0 && isQmdNoResultsLine(line)) {
+      return true;
+    }
+    start = end + 1;
+  }
+  return false;
 }
 
 function isQmdNoResultsLine(line: string): boolean {
