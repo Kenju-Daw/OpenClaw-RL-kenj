@@ -399,7 +399,24 @@ function extractFirstUserMessageFromTranscriptChunk(
   chunk: string,
   opts?: { includeInterSession?: boolean },
 ): string | null {
-  const lines = chunk.split(/\r?\n/).slice(0, MAX_LINES_TO_SCAN);
+  const lines: string[] = [];
+  let startIndex = 0;
+  let linesScanned = 0;
+  while (startIndex < chunk.length && linesScanned < MAX_LINES_TO_SCAN) {
+    let nextNewline = chunk.indexOf("\n", startIndex);
+    if (nextNewline === -1) {
+      nextNewline = chunk.length;
+    }
+    let endIndex = nextNewline;
+    if (endIndex > startIndex && chunk[endIndex - 1] === "\r") {
+      endIndex--;
+    }
+    const line = chunk.slice(startIndex, endIndex);
+    startIndex = nextNewline + 1;
+    linesScanned++;
+    lines.push(line);
+  }
+
   for (const line of lines) {
     if (!line.trim()) {
       continue;
@@ -483,8 +500,25 @@ function readLastMessagePreviewFromOpenTranscript(params: {
   fs.readSync(params.fd, buf, 0, readLen, readStart);
 
   const chunk = buf.toString("utf-8");
-  const lines = chunk.split(/\r?\n/).filter((l) => l.trim());
-  const tailLines = lines.slice(-LAST_MSG_MAX_LINES);
+  const tailLines: string[] = [];
+  let endIndex = chunk.length;
+
+  while (endIndex > 0 && tailLines.length < LAST_MSG_MAX_LINES) {
+    const prevNewline = chunk.lastIndexOf("\n", endIndex - 1);
+    const startIndex = prevNewline === -1 ? 0 : prevNewline + 1;
+
+    let sliceEnd = endIndex;
+    if (sliceEnd > startIndex && chunk[sliceEnd - 1] === "\r") {
+      sliceEnd--;
+    }
+
+    const line = chunk.slice(startIndex, sliceEnd);
+    if (line.trim()) {
+      tailLines.push(line);
+    }
+    endIndex = prevNewline;
+  }
+  tailLines.reverse();
 
   for (let i = tailLines.length - 1; i >= 0; i--) {
     const line = tailLines[i];
@@ -679,8 +713,25 @@ function readRecentMessagesFromTranscript(
     fs.readSync(fd, buf, 0, readLen, readStart);
 
     const chunk = buf.toString("utf-8");
-    const lines = chunk.split(/\r?\n/).filter((l) => l.trim());
-    const tailLines = lines.slice(-PREVIEW_MAX_LINES);
+    const tailLines: string[] = [];
+    let endIndex = chunk.length;
+
+    while (endIndex > 0 && tailLines.length < PREVIEW_MAX_LINES) {
+      const prevNewline = chunk.lastIndexOf("\n", endIndex - 1);
+      const startIndex = prevNewline === -1 ? 0 : prevNewline + 1;
+
+      let sliceEnd = endIndex;
+      if (sliceEnd > startIndex && chunk[sliceEnd - 1] === "\r") {
+        sliceEnd--;
+      }
+
+      const line = chunk.slice(startIndex, sliceEnd);
+      if (line.trim()) {
+        tailLines.push(line);
+      }
+      endIndex = prevNewline;
+    }
+    tailLines.reverse();
 
     const collected: TranscriptPreviewMessage[] = [];
     for (let i = tailLines.length - 1; i >= 0; i--) {
