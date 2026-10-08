@@ -75,14 +75,30 @@ export async function buildSessionEntry(absPath: string): Promise<SessionFileEnt
   try {
     const stat = await fs.stat(absPath);
     const raw = await fs.readFile(absPath, "utf-8");
-    const lines = raw.split("\n");
     const collected: string[] = [];
     const lineMap: number[] = [];
-    for (let jsonlIdx = 0; jsonlIdx < lines.length; jsonlIdx++) {
-      const line = lines[jsonlIdx];
+
+    let start = 0;
+    let jsonlIdx = 0;
+    while (start < raw.length) {
+      let end = raw.indexOf("\n", start);
+      if (end === -1) {
+        end = raw.length;
+      }
+
+      let sliceEnd = end;
+      if (sliceEnd > start && raw[sliceEnd - 1] === "\r") {
+        sliceEnd--;
+      }
+
+      const line = raw.slice(start, sliceEnd);
+      const currentIdx = jsonlIdx++;
+      start = end + 1;
+
       if (!line.trim()) {
         continue;
       }
+
       let record: unknown;
       try {
         record = JSON.parse(line);
@@ -112,7 +128,7 @@ export async function buildSessionEntry(absPath: string): Promise<SessionFileEnt
       const safe = redactSensitiveText(text, { mode: "tools" });
       const label = message.role === "user" ? "User" : "Assistant";
       collected.push(`${label}: ${safe}`);
-      lineMap.push(jsonlIdx + 1);
+      lineMap.push(currentIdx + 1);
     }
     const content = collected.join("\n");
     return {
