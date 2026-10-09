@@ -9,36 +9,50 @@ const GATEWAY_LOG_ERROR_PATTERNS = [
   /tailscale .* requires/i,
 ];
 
-async function readLastLogLine(filePath: string): Promise<string | null> {
-  try {
-    const raw = await fs.readFile(filePath, "utf8");
-    const lines = raw.split(/\r?\n/).map((line) => line.trim());
-    for (let i = lines.length - 1; i >= 0; i -= 1) {
-      if (lines[i]) {
-        return lines[i];
-      }
+/**
+ * ⚡ Bolt: Performance Optimization
+ * Replaced memory-heavy `.split(/\r?\n/).map()` on large text files with single-pass
+ * backward-scanning to find the last matched log line without array allocations.
+ */
+function findLastLineMatch(raw: string, matchFn?: (line: string) => boolean): string | null {
+  let end = raw.length;
+  while (end > 0) {
+    let start = raw.lastIndexOf("\n", end - 1);
+    if (start === -1) {
+      start = 0;
+    } else {
+      start += 1;
     }
-    return null;
-  } catch {
-    return null;
+    let sliceEnd = end;
+    if (sliceEnd > start && raw[sliceEnd - 1] === "\r") {
+      sliceEnd -= 1;
+    }
+    const line = raw.slice(start, sliceEnd).trim();
+    if (line && (!matchFn || matchFn(line))) {
+      return line;
+    }
+    end = start > 0 ? start - 1 : 0;
   }
+  return null;
 }
 
 export async function readLastGatewayErrorLine(env: NodeJS.ProcessEnv): Promise<string | null> {
   const { stdoutPath, stderrPath } = resolveGatewayLogPaths(env);
   const stderrRaw = await fs.readFile(stderrPath, "utf8").catch(() => "");
   const stdoutRaw = await fs.readFile(stdoutPath, "utf8").catch(() => "");
-  const lines = [...stderrRaw.split(/\r?\n/), ...stdoutRaw.split(/\r?\n/)].map((line) =>
-    line.trim(),
-  );
-  for (let i = lines.length - 1; i >= 0; i -= 1) {
-    const line = lines[i];
-    if (!line) {
-      continue;
-    }
-    if (GATEWAY_LOG_ERROR_PATTERNS.some((pattern) => pattern.test(line))) {
-      return line;
-    }
+
+  const isErrorLine = (line: string) =>
+    GATEWAY_LOG_ERROR_PATTERNS.some((pattern) => pattern.test(line));
+
+  const stdoutErr = findLastLineMatch(stdoutRaw, isErrorLine);
+  if (stdoutErr) {
+    return stdoutErr;
   }
-  return (await readLastLogLine(stderrPath)) ?? (await readLastLogLine(stdoutPath));
+
+  const stderrErr = findLastLineMatch(stderrRaw, isErrorLine);
+  if (stderrErr) {
+    return stderrErr;
+  }
+
+  return findLastLineMatch(stderrRaw) ?? findLastLineMatch(stdoutRaw);
 }
