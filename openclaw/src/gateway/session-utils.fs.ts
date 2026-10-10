@@ -399,9 +399,28 @@ function extractFirstUserMessageFromTranscriptChunk(
   chunk: string,
   opts?: { includeInterSession?: boolean },
 ): string | null {
-  const lines = chunk.split(/\r?\n/).slice(0, MAX_LINES_TO_SCAN);
-  for (const line of lines) {
-    if (!line.trim()) {
+  let pos = 0;
+  let linesScanned = 0;
+
+  while (pos < chunk.length && linesScanned < MAX_LINES_TO_SCAN) {
+    const nlIndex = chunk.indexOf("\n", pos);
+    const end = nlIndex === -1 ? chunk.length : nlIndex;
+    let lineEnd = end;
+
+    if (lineEnd > pos && chunk.charCodeAt(lineEnd - 1) === 13) {
+      lineEnd--;
+    }
+
+    const line = chunk.slice(pos, lineEnd).trim();
+    linesScanned++;
+
+    if (nlIndex !== -1) {
+      pos = nlIndex + 1;
+    } else {
+      pos = chunk.length;
+    }
+
+    if (!line) {
       continue;
     }
     try {
@@ -483,8 +502,25 @@ function readLastMessagePreviewFromOpenTranscript(params: {
   fs.readSync(params.fd, buf, 0, readLen, readStart);
 
   const chunk = buf.toString("utf-8");
-  const lines = chunk.split(/\r?\n/).filter((l) => l.trim());
-  const tailLines = lines.slice(-LAST_MSG_MAX_LINES);
+  const tailLines: string[] = [];
+  let pos = chunk.length;
+
+  while (pos > 0 && tailLines.length < LAST_MSG_MAX_LINES) {
+    const nlIndex = chunk.lastIndexOf("\n", pos - 1);
+    const start = nlIndex === -1 ? 0 : nlIndex + 1;
+    let end = pos;
+
+    if (end > start && chunk.charCodeAt(end - 1) === 13) {
+      end--;
+    }
+
+    const line = chunk.slice(start, end).trim();
+    if (line) {
+      tailLines.unshift(line);
+    }
+
+    pos = nlIndex;
+  }
 
   for (let i = tailLines.length - 1; i >= 0; i--) {
     const line = tailLines[i];
@@ -679,8 +715,25 @@ function readRecentMessagesFromTranscript(
     fs.readSync(fd, buf, 0, readLen, readStart);
 
     const chunk = buf.toString("utf-8");
-    const lines = chunk.split(/\r?\n/).filter((l) => l.trim());
-    const tailLines = lines.slice(-PREVIEW_MAX_LINES);
+    const tailLines: string[] = [];
+    let pos = chunk.length;
+
+    while (pos > 0 && tailLines.length < PREVIEW_MAX_LINES) {
+      const nlIndex = chunk.lastIndexOf("\n", pos - 1);
+      const start = nlIndex === -1 ? 0 : nlIndex + 1;
+      let end = pos;
+
+      if (end > start && chunk.charCodeAt(end - 1) === 13) {
+        end--;
+      }
+
+      const line = chunk.slice(start, end).trim();
+      if (line) {
+        tailLines.unshift(line);
+      }
+
+      pos = nlIndex;
+    }
 
     const collected: TranscriptPreviewMessage[] = [];
     for (let i = tailLines.length - 1; i >= 0; i--) {

@@ -1,0 +1,4 @@
+
+## 2025-03-02 - Array Split Replacements for Forward/Backward File Scanning
+**Learning:** In `openclaw`, parsing multi-line command output or logs frequently uses `.split(/\r?\n/)`. In files like `session-utils.fs.ts`, doing this on large buffers allocates an enormous amount of intermediate string arrays, causing significant GC pressure. Using a direct scan via `while` loops with `indexOf('\n')` for forward reading or `lastIndexOf('\n')` for backward reading is much more efficient. When dealing with carriage returns `\r`, you can check if `chunk.charCodeAt(end - 1) === 13` and adjust the line-ending boundary before string-slicing.
+**Action:** Replace chaining methods `.split(/\r?\n/)` with a forward or backward `while` loop index-scanning to improve parsing performance on large multi-line strings, explicitly handling `charCodeAt(end - 1) === 13` for CR.
