@@ -83,9 +83,20 @@ export function readSessionMessages(
     return [];
   }
 
-  const lines = fs.readFileSync(filePath, "utf-8").split(/\r?\n/);
+  const chunk = fs.readFileSync(filePath, "utf-8");
   const messages: unknown[] = [];
-  for (const line of lines) {
+  let searchStart = 0;
+  while (searchStart < chunk.length) {
+    let end = chunk.indexOf("\n", searchStart);
+    if (end === -1) {
+      end = chunk.length;
+    }
+    let line = chunk.slice(searchStart, end);
+    if (line.endsWith("\r")) {
+      line = line.slice(0, -1);
+    }
+    searchStart = end + 1;
+
     if (!line.trim()) {
       continue;
     }
@@ -399,8 +410,21 @@ function extractFirstUserMessageFromTranscriptChunk(
   chunk: string,
   opts?: { includeInterSession?: boolean },
 ): string | null {
-  const lines = chunk.split(/\r?\n/).slice(0, MAX_LINES_TO_SCAN);
-  for (const line of lines) {
+  let searchStart = 0;
+  let linesProcessed = 0;
+
+  while (searchStart < chunk.length && linesProcessed < MAX_LINES_TO_SCAN) {
+    let end = chunk.indexOf("\n", searchStart);
+    if (end === -1) {
+      end = chunk.length;
+    }
+    let line = chunk.slice(searchStart, end);
+    if (line.endsWith("\r")) {
+      line = line.slice(0, -1);
+    }
+    searchStart = end + 1;
+    linesProcessed++;
+
     if (!line.trim()) {
       continue;
     }
@@ -483,11 +507,22 @@ function readLastMessagePreviewFromOpenTranscript(params: {
   fs.readSync(params.fd, buf, 0, readLen, readStart);
 
   const chunk = buf.toString("utf-8");
-  const lines = chunk.split(/\r?\n/).filter((l) => l.trim());
-  const tailLines = lines.slice(-LAST_MSG_MAX_LINES);
+  let searchEnd = chunk.length;
+  let linesProcessed = 0;
 
-  for (let i = tailLines.length - 1; i >= 0; i--) {
-    const line = tailLines[i];
+  while (searchEnd > 0 && linesProcessed < LAST_MSG_MAX_LINES) {
+    const start = chunk.lastIndexOf("\n", searchEnd - 1);
+    let line = chunk.slice(start + 1, searchEnd);
+    if (line.endsWith("\r")) {
+      line = line.slice(0, -1);
+    }
+    searchEnd = start;
+
+    if (!line.trim()) {
+      continue;
+    }
+    linesProcessed++;
+
     try {
       const parsed = JSON.parse(line);
       const msg = parsed?.message as TranscriptMessage | undefined;
@@ -679,12 +714,23 @@ function readRecentMessagesFromTranscript(
     fs.readSync(fd, buf, 0, readLen, readStart);
 
     const chunk = buf.toString("utf-8");
-    const lines = chunk.split(/\r?\n/).filter((l) => l.trim());
-    const tailLines = lines.slice(-PREVIEW_MAX_LINES);
+    let searchEnd = chunk.length;
+    let linesProcessed = 0;
 
     const collected: TranscriptPreviewMessage[] = [];
-    for (let i = tailLines.length - 1; i >= 0; i--) {
-      const line = tailLines[i];
+    while (searchEnd > 0 && linesProcessed < PREVIEW_MAX_LINES) {
+      const start = chunk.lastIndexOf("\n", searchEnd - 1);
+      let line = chunk.slice(start + 1, searchEnd);
+      if (line.endsWith("\r")) {
+        line = line.slice(0, -1);
+      }
+      searchEnd = start;
+
+      if (!line.trim()) {
+        continue;
+      }
+      linesProcessed++;
+
       try {
         const parsed = JSON.parse(line);
         const msg = parsed?.message as TranscriptPreviewMessage | undefined;
