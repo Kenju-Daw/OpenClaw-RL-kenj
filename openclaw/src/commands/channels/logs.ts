@@ -57,16 +57,34 @@ async function readTailLines(file: string, limit: number): Promise<string[]> {
     const buffer = Buffer.alloc(length);
     const readResult = await handle.read(buffer, 0, length, start);
     const text = buffer.toString("utf8", 0, readResult.bytesRead);
-    let lines = text.split("\n");
-    if (start > 0) {
-      lines = lines.slice(1);
+
+    const lines: string[] = [];
+    let searchIndex = text.length;
+
+    if (searchIndex > 0 && text[searchIndex - 1] === "\n") {
+      searchIndex--;
+      if (searchIndex > 0 && text[searchIndex - 1] === "\r") {
+        searchIndex--;
+      }
     }
-    if (lines.length && lines[lines.length - 1] === "") {
-      lines = lines.slice(0, -1);
+
+    while (searchIndex >= 0 && lines.length < limit) {
+      const startOfLine = searchIndex > 0 ? text.lastIndexOf("\n", searchIndex - 1) : -1;
+
+      if (startOfLine === -1 && start > 0) {
+        break;
+      }
+
+      let sliceEnd = searchIndex;
+      if (sliceEnd > 0 && text[sliceEnd - 1] === "\r") {
+        sliceEnd--;
+      }
+
+      const lineStart = startOfLine + 1;
+      lines.unshift(text.slice(lineStart, sliceEnd));
+      searchIndex = startOfLine;
     }
-    if (lines.length > limit) {
-      lines = lines.slice(lines.length - limit);
-    }
+
     return lines;
   } finally {
     await handle.close();
